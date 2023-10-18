@@ -48,6 +48,12 @@ function App() {
         CharlesTool
       </Typography>
 
+      {/* Figma */}
+      <div style={{ margin: "20px 0" }}>
+        <Typography variant="h6">Figma</Typography>
+        <TextField label="Nom del projecte a Figma" fullWidth margin="normal" />
+      </div>
+
       {/* Confluence */}
       <div style={{ margin: "20px 0" }}>
         <Typography variant="h6">Confluence</Typography>
@@ -93,13 +99,13 @@ function App() {
           </Select>
         </FormControl>
         <FormControl fullWidth margin="normal">
-          <InputLabel>No de la FE</InputLabel>
+          <InputLabel>Nom de la FE</InputLabel>
           <Select>
-            {fesRally.map((fe) => (
-              <MenuItem key={fe.id} value={fe.id}>
-                {fe.nombre}
+            {/* {fesRally.map((fe) => ( */}
+              <MenuItem >
+                test
               </MenuItem>
-            ))}
+            {/* ))} */}
           </Select>
         </FormControl>
       </div>
@@ -114,19 +120,15 @@ function App() {
         />
       </div>
 
-      {/* Figma */}
-      <div style={{ margin: "20px 0" }}>
-        <Typography variant="h6">Figma</Typography>
-        <TextField label="Nom del projecte a Figma" fullWidth margin="normal" />
-      </div>
+      <Button variant="contained" color="primary" onClick={handleSave}>
+        Guardar
+      </Button>
 
-      <Button variant="contained" color="primary" onClick={handleSave}>Guardar</Button>
-
-      <Snackbar 
-        open={openSnackbar} 
-        autoHideDuration={5000} 
-        onClose={handleCloseSnackbar} 
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      <Snackbar
+        open={openSnackbar}
+        autoHideDuration={5000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
         <Alert onClose={handleCloseSnackbar} severity="success">
           Se ha guardado correctamente la configuración para la herramienta.
