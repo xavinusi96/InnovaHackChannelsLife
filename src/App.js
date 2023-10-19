@@ -29,23 +29,24 @@ function App() {
   const [jsonText, setJsonText] = useState(""); // Aquí se almacenará el texto en formato JSON
   let [dades, setDades] = useState(null);
   let [dades2, setDades2] = useState(null);
+  const [selectedFigmaPage, setSelectedFigmaPage] = useState("");
 
   const proyectosFigma = [
-    { id: 1, nombre: "Figma 1" },
-    { id: 2, nombre: "Figma 2" },
-    { id: 3, nombre: "Figma 3" },
-    { id: 4, nombre: "Figma 4" },
+    { id: 1, nombre: "[DISS]-Simulación-y-contratación-MyBox-Jubilación" },
   ];
 
   const paginasFigma = [
-    { id: 1, nombre: "Page 1" },
-    { id: 2, nombre: "Page 2" },
-    { id: 3, nombre: "Page 3" },
-    { id: 4, nombre: "Page 4" },
+    { id: "16691:167651", nombre: "20231018 | Simulación y contratación" },
+    {
+      id: "16691-167644",
+      nombre: "20230511 [Migración a OMNIA] Simulación y contratación",
+    },
+    { id: "16691-167803", nombre: "20220922 [OMNIA] Contratación" },
   ];
 
   const ftoken = "figd_wV1cFmOv1Bq6oMNfJor7rDl1pCbkb4KSvLojzDi4";
   const [apiOutput, setApiOutput] = useState("");
+  const [apiLiterals, setApiLiterals] = useState("");
 
   const getCosPagina = (o) => {
     let res = null;
@@ -86,9 +87,10 @@ function App() {
   };
 
   const api = () => {
-    setApiOutput("...Carregant figma...");
+    setApiOutput("...Carregant component...");
+    setApiLiterals("...Carregant literals...");
     const ffile = "2OgFN5TfLhvJy0BUabOTgR";
-    const fids = "16691:167651";
+    const fids = selectedFigmaPage;
 
     fetch(`https://api.figma.com/v1/files/${ffile}?ids=${fids}`, {
       method: "GET",
@@ -97,6 +99,87 @@ function App() {
       .then((resp) => resp.json())
       .then((json) => tractaSortida(json));
   };
+
+  function tractaPropietats(props) {
+    props = tractaPropietat(props, "text");
+    props = tractaPropietat(props, "title-1");
+    props = tractaPropietat(props, "title-2");
+    props = tractaPropietat(props, "button");
+    props = tractaPropietatFig(props, "fig");
+    props = tractaPropietatFig(props, "fig-1");
+    let tmp = new Array();
+    props.forEach((a) =>
+      tmp.push(
+        a
+          .replaceAll('break="medium (32px)"', 'break="medium"')
+          .replaceAll('break="card space (20px)"', 'break="small"')
+          .replaceAll('break="large (40px)"', 'break="large"')
+          .replaceAll('break="small (24px)"', 'break="small"')
+          .replaceAll("✏️", "")
+          .replaceAll("🔁", "")
+      )
+    );
+    return tmp;
+  }
+  function tractaPropietat(props, nom) {
+    if (props.includes(nom + '="true"')) {
+      let i = 0;
+      while (i < props.length && !props[i].startsWith("✏️" + nom + "=")) i++;
+      if (i < props.length) {
+        let val = props[i].substring(props[i].indexOf("="));
+        props = props.filter((item) => item !== nom + '="true"');
+        props = props.filter((item) => item !== props[i]);
+        props.push(nom + val);
+      }
+    } else if (props.includes(nom + '="false"')) {
+      props = props.filter((item) => item !== nom + '="false"');
+      let i = 0;
+      while (i < props.length && !props[i].startsWith("✏️" + nom + "=")) i++;
+      if (i < props.length) props = props.filter((item) => item !== props[i]);
+    }
+    return props;
+  }
+  function tractaPropietatFig(props, nom) {
+    if (props.includes(nom + '="false"')) {
+      props = props.filter((item) => item !== nom + '="false"');
+      let i = 0;
+      while (i < props.length && !props[i].startsWith("🔁" + nom + "=")) i++;
+      if (i < props.length) props = props.filter((item) => item !== props[i]);
+    } else {
+      let i = 0;
+      while (i < props.length && !props[i].startsWith("🔁" + nom + "=")) i++;
+      if (i < props.length) {
+        let val = props[i].substring(props[i].indexOf("="));
+        props = props.filter((item) => item !== nom + '="true"');
+        props = props.filter((item) => item !== props[i]);
+        props.push(nom + val);
+      }
+    }
+    return props;
+  }
+
+  function transformToJSON(inputArray) {
+    // Unimos todos los elementos del array en una sola cadena
+    const inputString = inputArray.join(" ");
+
+    // Primero, quitamos el ✏️ de la entrada y dividimos la entrada en elementos basados en comas
+    const items = inputString.split("✏️").filter(Boolean);
+
+    // Crear un objeto vacío para almacenar la salida
+    let output = {};
+
+    // Iteramos sobre cada elemento para separar la clave y el valor y añadirlos al objeto
+    items.forEach((item) => {
+      let [key, value] = item.split("=").map((s) => s.trim());
+      // Cambiamos las claves para que sean válidas en JSON (añadimos "lit_" al inicio)
+      key = "lit_" + key;
+      // Eliminamos las comillas del principio y del final del valor
+      value = value.slice(1, -1);
+      output[key] = value;
+    });
+
+    return JSON.stringify(output, null, 2);
+  }
 
   const tractaSortida = (json) => {
     dades = json;
@@ -111,11 +194,12 @@ function App() {
         let props = getPropsComponent(c["componentProperties"]);
         let ocomp = new Object();
         ocomp.name = comp;
-        ocomp.props = props;
+        ocomp.props = tractaPropietats(props);
         pagina.components.push(ocomp);
         let sprops = "";
-        if (props.length > 0)
-          sprops = props.join(" ").replaceAll("✏️", "").replaceAll("🔁", "");
+        sprops = tractaPropietats(props).join(" ");
+        // if (props.length > 0)
+        // sprops = props.join(" ").replaceAll("✏️", "").replaceAll("🔁", "");
         res +=
           "<" +
           comp +
@@ -124,18 +208,20 @@ function App() {
           comp +
           ">";
         // per cada propietat recollir les que son literals i dels literals el que sigui número que sigui una variable replace(/[^0-9]+/g,"")
-        pagina.components.forEach((c) => {
-          c.props.forEach((p) => {
-            if (p.startsWith("✏️")) pagina.literals.push(p);
-          });
+
+        props.forEach((p) => {
+          if (p.startsWith("✏️")) pagina.literals.push(p);
         });
+
         console.log(JSON.stringify(pagina));
         dades2 = pagina;
       });
     }
 
-    setApiOutput(res
-    );
+    setApiOutput(res);
+
+    let literalsFormat = transformToJSON(pagina.literals);
+    setApiLiterals(literalsFormat);
   };
 
   const handleSave = () => {
@@ -183,7 +269,10 @@ function App() {
             {/* Desplegable para Page Figma */}
             <FormControl fullWidth margin="normal">
               <InputLabel>Page Figma</InputLabel>
-              <Select>
+              <Select
+                value={selectedFigmaPage}
+                onChange={(e) => setSelectedFigmaPage(e.target.value)}
+              >
                 {paginasFigma.map((pagina) => (
                   <MenuItem key={pagina.id} value={pagina.id}>
                     {pagina.nombre}
@@ -276,31 +365,46 @@ function App() {
           {/* Sección de Generar pantalla */}
           <div style={{ margin: "20px 0" }}>
             <Typography variant="h6">Generar Pantalla</Typography>
-            <Button variant="contained" color="primary" onClick={api}>
+            <TextareaAutosize
+              value={apiOutput}
+              onChange={(e) => setJsonText(e.target.value)}
+              rowsMin={5}
+              style={{ width: "100%" }}
+              placeholder="Aquí se mostrará el componente omnia"
+            />
+            {/* <Button variant="contained" color="primary" onClick={api}>
               Generar pantalla a partir de Figma
-            </Button>
+            </Button> */}
             <br></br>
-            {apiOutput}
+            {/* {apiOutput} */}
           </div>
 
           {/* Sección de Literales */}
           <div style={{ margin: "20px 0" }}>
             <Typography variant="h6">Literales</Typography>
-            <Button
+            {/* <Button
               variant="contained"
               color="primary"
               style={{ marginBottom: "20px" }}
             >
               Generar fichero literales a partir del Figma
-            </Button>
+            </Button> */}
             <TextareaAutosize
-              value={jsonText}
+              value={apiLiterals}
               onChange={(e) => setJsonText(e.target.value)}
               rowsMin={5}
               style={{ width: "100%" }}
               placeholder="Aquí se mostrará el JSON..."
             />
           </div>
+          <Button
+            variant="contained"
+            color="primary"
+            style={{ marginTop: "20px" }}
+            onClick={api}
+          >
+            Generar Todo
+          </Button>
         </Grid>
       </Grid>
     </Container>
